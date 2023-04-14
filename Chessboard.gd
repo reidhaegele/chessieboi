@@ -34,7 +34,7 @@ var myOffset: Vector2 = Vector2(225,240)
 var selectedPiece: Sprite = null
 var lastPiece: Sprite = null
 var dotSize = 10
-var dotColor = Color(1, 0, 0)
+var dotColor = Color(0.9, 0.8, 0.3)
 
 func _ready() -> void:
 	# Spawn chess pieces on the board
@@ -113,6 +113,7 @@ func _process(delta: float) -> void:
 			# Draw dots on valid move squares
 			for move in validMoves:
 				draw_dot(move)
+			draw_dot(Vector2(int((selectedPiece.position.x + myOffset.x) / cellSize.x), int((selectedPiece.position.y + myOffset.y) / cellSize.y)), true)
 	else:
 		clear_dots()
 
@@ -138,13 +139,16 @@ func clear_dots() -> void:
 		if child.has_meta("is_dot"):
 			child.queue_free()
 
-func draw_dot(square: Vector2) -> void:
+func draw_dot(square: Vector2, dark: bool=false) -> void:
 	# Create a new dot Sprite
 	var dot = Sprite.new()
 	dot.texture = load("res://sprites/Dot.png")  # Set dot texture
 	dot.position = square * cellSize - myOffset # Set dot position based on square
 	dot.scale = Vector2(dotSize, dotSize) / cellSize  # Set dot scale based on dot size and cell size
-#	dot.modulate = dotColor  # Set dot color
+	
+	if dark:
+		dot.modulate = dotColor  # Set dot color
+		dot.self_modulate = dotColor
 	
 	# Set a metadata flag to identify the dot
 	dot.set_meta("is_dot", true)
