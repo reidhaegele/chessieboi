@@ -32,6 +32,7 @@ var cellSize: Vector2 = Vector2(64, 64)
 var myOffset: Vector2 = Vector2(225,240)
 
 var selectedPiece: Sprite = null
+var lastPiece: Sprite = null
 var dotSize = 10
 var dotColor = Color(1, 0, 0)
 
@@ -102,14 +103,16 @@ func _input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if selectedPiece != null:
-		# Clear previous dots
-		clear_dots()
-		# Get selected piece's valid moves
-		var validMoves = get_valid_moves(selectedPiece)
-		
-		# Draw dots on valid move squares
-		for move in validMoves:
-			draw_dot(move)
+		if selectedPiece != lastPiece:
+			lastPiece = selectedPiece
+			# Clear previous dots
+			clear_dots()
+			# Get selected piece's valid moves
+			var validMoves = get_valid_moves(selectedPiece)
+			
+			# Draw dots on valid move squares
+			for move in validMoves:
+				draw_dot(move)
 	else:
 		clear_dots()
 
@@ -124,6 +127,7 @@ func move_selected_piece(dot: Sprite) -> void:
 	selectedPiece.position = dot.position
 	clear_dots()
 	selectedPiece = null
+	lastPiece = null
 
 func set_selected_piece(piece: Sprite=null) -> void:
 	selectedPiece = piece
