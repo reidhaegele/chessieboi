@@ -170,14 +170,14 @@ func get_valid_moves(piece) -> Array:
 		if is_valid_square(leftCapture):
 			var leftCapturePiece = get_piece_on_square(leftCapture)
 			var lcpColor = leftCapturePiece.to_lower()==leftCapturePiece
-			if leftCapturePiece != null and lcpColor != is_black:
+			if leftCapturePiece != ' ' and lcpColor != is_black:
 				validMoves.append(leftCapture)
 				
 		# Check if right capture is valid
 		if is_valid_square(rightCapture):
 			var rightCapturePiece = get_piece_on_square(rightCapture)
 			var rcpColor = rightCapturePiece.to_lower()==rightCapturePiece
-			if rightCapturePiece != null and rcpColor != is_black:
+			if rightCapturePiece != ' ' and rcpColor != is_black:
 				validMoves.append(rightCapture)
 		
 		# Check for valid moves one square forward
