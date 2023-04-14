@@ -100,6 +100,7 @@ func _input(event: InputEvent) -> void:
 				# ... add your logic here ...
 			else:
 				set_selected_piece()
+				lastPiece=null
 
 func _process(delta: float) -> void:
 	if selectedPiece != null:
