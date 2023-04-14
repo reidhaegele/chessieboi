@@ -16,8 +16,8 @@ var chessBoard: Array = [
 	"        ",
 	"        ",
 	"        ",
-	"        ",
-	"        "
+	"PPPPPPPP",
+	"RNBKQBNR"
 ]
 
 # Resource containing the chess piece sprites
@@ -45,10 +45,13 @@ func _ready() -> void:
 			# Spawn the chess piece sprite if it's not an empty cell
 			if pieceChar != " ":
 				var pieceSprite: Sprite = Sprite.new() 
-				pieceSprite.texture = load("res://sprites/" + pieceChar + ".png")
+				pieceSprite.set_name(pieceChar)
+				if pieceChar.to_lower() == pieceChar:
+					pieceSprite.texture = load("res://sprites/" + pieceChar + ".png")
+				else:
+					pieceSprite.texture = load("res://sprites/" + pieceChar + "1.png")
 				pieceSprite.position = Vector2(col, row) * cellSize - myOffset
 				pieceSprite.scale = Vector2(cellSize.x / pieceSprite.texture.get_width(), cellSize.y / pieceSprite.texture.get_height())
-				pieceSprite.set_name(pieceChar)
 				add_child(pieceSprite)
 
 func _input(event: InputEvent) -> void:
@@ -94,6 +97,8 @@ func _input(event: InputEvent) -> void:
 				# Perform actions on the selected chess piece sprite
 				set_selected_piece(chess_piece)
 				# ... add your logic here ...
+			else:
+				set_selected_piece()
 
 func _process(delta: float) -> void:
 	if selectedPiece != null:
@@ -105,6 +110,8 @@ func _process(delta: float) -> void:
 		# Draw dots on valid move squares
 		for move in validMoves:
 			draw_dot(move)
+	else:
+		clear_dots()
 
 func move_selected_piece(dot: Sprite) -> void:
 	var oldCellX = int((selectedPiece.position.x + myOffset.x) / cellSize.x)
@@ -118,7 +125,7 @@ func move_selected_piece(dot: Sprite) -> void:
 	clear_dots()
 	selectedPiece = null
 
-func set_selected_piece(piece: Sprite) -> void:
+func set_selected_piece(piece: Sprite=null) -> void:
 	selectedPiece = piece
 
 func clear_dots() -> void:
