@@ -1,0 +1,225 @@
+extends Sprite
+
+# Array to represent the chess pieces on the board
+var chessBoard: Array = [
+#	"rnbqkbnr",
+#	"pppppppp",
+#	"        ",
+#	"        ",
+#	"        ",
+#	"        ",
+#	"PPPPPPPP",
+#	"RNBQKBNR"
+	"rnbqkbnr",
+	"pppppppp",
+	"        ",
+	"        ",
+	"        ",
+	"        ",
+	"        ",
+	"        "
+]
+
+# Resource containing the chess piece sprites
+var chessPieceSprites: Array = [
+	"r", "n", "b", "q", "k", "b", "n", "r",  # Black pieces
+	"p", "P",                               # Pawns
+	"R", "N", "B", "Q", "K", "B", "N", "R"   # White pieces
+]
+
+# Chessboard cell size
+var cellSize: Vector2 = Vector2(64, 64)
+var myOffset: Vector2 = Vector2(225,240)
+
+var selectedPiece: Sprite = null
+var dotSize = 10
+var dotColor = Color(1, 0, 0)
+
+func _ready() -> void:
+	# Spawn chess pieces on the board
+	for row in range(8):
+		for col in range(8):
+			# Get the chess piece character from the array
+			var pieceChar: String = chessBoard[row][col]
+
+			# Spawn the chess piece sprite if it's not an empty cell
+			if pieceChar != " ":
+				var pieceSprite: Sprite = Sprite.new() 
+				pieceSprite.texture = load("res://sprites/" + pieceChar + ".png")
+				pieceSprite.position = Vector2(col, row) * cellSize - myOffset
+				pieceSprite.scale = Vector2(cellSize.x / pieceSprite.texture.get_width(), cellSize.y / pieceSprite.texture.get_height())
+				pieceSprite.set_name(pieceChar)
+				add_child(pieceSprite)
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mouse_event: InputEventMouseButton = event
+		if mouse_event.button_index == BUTTON_LEFT and mouse_event.pressed:
+			# Get the cell position that was clicked
+			var cellX: int = int((mouse_event.position.x) / cellSize.x)
+			var cellY: int = int((mouse_event.position.y) / cellSize.y)
+
+			# Generate the name of the chess piece sprite based on the cell position
+#			var piece_name: String = chessBoard[cellY][cellX]
+			
+			var chess_piece: Node = null
+			for child in self.get_children():
+				var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
+				var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
+				if tiley == cellY and tilex == cellX:
+					if child.has_meta("is_dot"):
+						move_selected_piece(child)
+					else:
+						chess_piece = child
+			
+#			# Debugging Purposes _+_+_+_+_+_+_+_+_
+#			for child in self.get_children():
+#				# Check if the child is a Label node
+#				if child is Label:
+#					# Call queue_free() to delete the Label node
+#					child.queue_free()
+#			# Create a Label node
+#			var label = Label.new()
+#			# Set the text to display
+#			label.text = "Piece: " + piece_name + "\nCellY: " + str(cellY) + "\nCellX: " + str(cellX) + "\nmouseX: " + str(mouse_event.position.x) + "\nmouseY: " + str(mouse_event.position.y)
+#			# Add the Label node to the parent node
+#			add_child(label)
+#			# Debugging Purposes Over _+_+_+_+_+_+_+_+_
+
+			# Get the chess piece sprite by name
+#			var chess_piece: Node = get_node(piece_name)
+
+			# Check if the retrieved node is a valid chess piece sprite
+			if chess_piece != null and chess_piece is Sprite:
+				# Perform actions on the selected chess piece sprite
+				set_selected_piece(chess_piece)
+				# ... add your logic here ...
+
+func _process(delta: float) -> void:
+	if selectedPiece != null:
+		# Clear previous dots
+		clear_dots()
+		# Get selected piece's valid moves
+		var validMoves = get_valid_moves(selectedPiece)
+		
+		# Draw dots on valid move squares
+		for move in validMoves:
+			draw_dot(move)
+
+func move_selected_piece(dot: Sprite) -> void:
+	var oldCellX = int((selectedPiece.position.x + myOffset.x) / cellSize.x)
+	var oldCellY = int((selectedPiece.position.y + myOffset.y) / cellSize.y)
+	var newCellX = int((dot.position.x + myOffset.x) / cellSize.x)
+	var newCellY = int((dot.position.y + myOffset.y) / cellSize.y)
+	var temp = chessBoard[oldCellY][oldCellX]
+	chessBoard[oldCellY][oldCellX] = ' '
+	chessBoard[newCellY][newCellX] = temp
+	selectedPiece.position = dot.position
+	clear_dots()
+	selectedPiece = null
+
+func set_selected_piece(piece: Sprite) -> void:
+	selectedPiece = piece
+
+func clear_dots() -> void:
+	# Remove all child nodes that are dots
+	for child in get_children():
+		if child.has_meta("is_dot"):
+			child.queue_free()
+
+func draw_dot(square: Vector2) -> void:
+	# Create a new dot Sprite
+	var dot = Sprite.new()
+	dot.texture = load("res://sprites/Dot.png")  # Set dot texture
+	dot.position = square * cellSize - myOffset # Set dot position based on square
+	dot.scale = Vector2(dotSize, dotSize) / cellSize  # Set dot scale based on dot size and cell size
+#	dot.modulate = dotColor  # Set dot color
+	
+	# Set a metadata flag to identify the dot
+	dot.set_meta("is_dot", true)
+	
+	# Add dot as a child of this Node2D
+	add_child(dot)
+
+func get_valid_moves(piece) -> Array:
+	var validMoves = []
+	var cellX: int = int((piece.position.x + myOffset.x) / cellSize.x)
+	var cellY: int = int((piece.position.y + myOffset.y) / cellSize.y)
+	var currentSquare = Vector2(cellX, cellY)
+	var direction = -1  # Assuming the pawn moves towards the positive y-axis (up the board)
+	var is_black
+	
+	is_black = piece.name == piece.name.to_lower()
+	
+	if is_black:  # Assuming the pawn has a `is_black` boolean property that indicates its color
+		direction = 1  # If the pawn is black, it moves towards the negative y-axis (down the board)
+	
+	if 'p' in piece.name.to_lower():
+		# Check for valid moves diagonally for capturing opponent's pieces
+		var leftCapture = currentSquare + Vector2(-1, direction)
+		var rightCapture = currentSquare + Vector2(1, direction)
+		
+		# Check if left capture is valid
+		if is_valid_square(leftCapture):
+			var leftCapturePiece = get_piece_on_square(leftCapture)
+			var lcpColor = leftCapturePiece.to_lower()==leftCapturePiece
+			if leftCapturePiece != null and lcpColor != is_black:
+				validMoves.append(leftCapture)
+				
+		# Check if right capture is valid
+		if is_valid_square(rightCapture):
+			var rightCapturePiece = get_piece_on_square(rightCapture)
+			var rcpColor = rightCapturePiece.to_lower()==rightCapturePiece
+			if rightCapturePiece != null and rcpColor != is_black:
+				validMoves.append(rightCapture)
+		
+		# Check for valid moves one square forward
+		var forwardMove = currentSquare + Vector2(0, direction)
+		if is_valid_square(forwardMove) and get_piece_on_square(forwardMove) == ' ':
+			validMoves.append(forwardMove)
+			
+		# Check for valid moves two squares forward from starting position
+		var startingPosition = (1 if is_black else 6)  # Assuming the pawn starts at row 1 for white, row 6 for black
+		if currentSquare.y == startingPosition:
+			var doubleForwardMove = currentSquare + Vector2(0, direction * 2)
+			if is_valid_square(doubleForwardMove) and get_piece_on_square(doubleForwardMove) == ' ':
+				validMoves.append(doubleForwardMove)
+	
+	elif 'b' in piece.name.to_lower():
+		# Define the possible directions for bishop movement
+		var directions = [
+			Vector2(-1, -1),  # Top-left diagonal
+			Vector2(1, -1),   # Top-right diagonal
+			Vector2(-1, 1),   # Bottom-left diagonal
+			Vector2(1, 1),    # Bottom-right diagonal
+		]
+		
+		# Iterate through each direction and check for valid moves
+		for dir in directions:
+			var nextSquare = currentSquare + dir
+			while is_valid_square(nextSquare):
+				var pieceOnNextSquare = get_piece_on_square(nextSquare)
+				if pieceOnNextSquare == ' ':
+					# If the square is empty, add it as a valid move
+					validMoves.append(nextSquare)
+				else:
+					# If the square has an opponent's piece, capture it and stop checking in this direction
+					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
+					if ponsColor != is_black:
+						validMoves.append(nextSquare)
+					break
+				nextSquare += dir  # Move to the next square in the same direction
+	
+	return validMoves
+
+func is_valid_square(square: Vector2) -> bool:
+	var boardSize = 8  # Assuming the chessboard size is 8x8
+
+	# Check if the square is within the chessboard bounds
+	if square.x >= 0 and square.x < boardSize and square.y >= 0 and square.y < boardSize:
+		return true
+	else:
+		return false
+
+func get_piece_on_square(square: Vector2) -> String:
+	return chessBoard[square.y][square.x]
