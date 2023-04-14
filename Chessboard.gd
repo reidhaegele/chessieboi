@@ -177,13 +177,12 @@ func get_valid_moves(piece) -> Array:
 		var forwardMove = currentSquare + Vector2(0, direction)
 		if is_valid_square(forwardMove) and get_piece_on_square(forwardMove) == ' ':
 			validMoves.append(forwardMove)
-			
-		# Check for valid moves two squares forward from starting position
-		var startingPosition = (1 if is_black else 6)  # Assuming the pawn starts at row 1 for white, row 6 for black
-		if currentSquare.y == startingPosition:
-			var doubleForwardMove = currentSquare + Vector2(0, direction * 2)
-			if is_valid_square(doubleForwardMove) and get_piece_on_square(doubleForwardMove) == ' ':
-				validMoves.append(doubleForwardMove)
+			# Check for valid moves two squares forward from starting position
+			var startingPosition = (1 if is_black else 6)  # Assuming the pawn starts at row 1 for white, row 6 for black
+			if currentSquare.y == startingPosition:
+				var doubleForwardMove = currentSquare + Vector2(0, direction * 2)
+				if is_valid_square(doubleForwardMove) and get_piece_on_square(doubleForwardMove) == ' ':
+					validMoves.append(doubleForwardMove)
 	
 	elif 'b' in piece.name.to_lower():
 		# Define the possible directions for bishop movement
@@ -209,6 +208,110 @@ func get_valid_moves(piece) -> Array:
 						validMoves.append(nextSquare)
 					break
 				nextSquare += dir  # Move to the next square in the same direction
+	
+	elif 'n' in piece.name.to_lower():
+		# Define the possible knight move offsets
+		var moveOffsets = [
+			Vector2(-2, -1),  # Two squares up and one square left
+			Vector2(-1, -2),  # One square up and two squares left
+			Vector2(1, -2),   # One square up and two squares right
+			Vector2(2, -1),   # Two squares up and one square right
+			Vector2(-2, 1),   # Two squares down and one square left
+			Vector2(-1, 2),   # One square down and two squares left
+			Vector2(1, 2),    # One square down and two squares right
+			Vector2(2, 1),    # Two squares down and one square right
+		]
+		
+		# Iterate through each move offset and check for valid moves
+		for offset in moveOffsets:
+			var nextSquare = currentSquare + offset
+			if is_valid_square(nextSquare):
+				var pieceOnNextSquare = get_piece_on_square(nextSquare)
+				if pieceOnNextSquare == ' ':
+					# If the square is empty, add it as a valid move
+					validMoves.append(nextSquare)
+				else:
+					# If the square has an opponent's piece, capture it and add as a valid move
+					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
+					if ponsColor != is_black:
+						validMoves.append(nextSquare)
+	
+	elif 'q' in piece.name.to_lower():
+		# Define the possible directions for queen movement (diagonal, horizontal, and vertical)
+		var directions = [
+			Vector2(-1, -1),  # Top-left diagonal
+			Vector2(1, -1),   # Top-right diagonal
+			Vector2(-1, 1),   # Bottom-left diagonal
+			Vector2(1, 1),    # Bottom-right diagonal
+			Vector2(0, -1),   # Left
+			Vector2(0, 1),    # Right
+			Vector2(-1, 0),   # Up
+			Vector2(1, 0),    # Down
+		]
+		
+		# Iterate through each direction and check for valid moves
+		for dir in directions:
+			var nextSquare = currentSquare + dir
+			while is_valid_square(nextSquare):
+				var pieceOnNextSquare = get_piece_on_square(nextSquare)
+				if pieceOnNextSquare == ' ':
+					# If the square is empty, add it as a valid move
+					validMoves.append(nextSquare)
+				else:
+					# If the square has an opponent's piece, capture it and stop checking in this direction
+					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
+					if ponsColor != is_black:
+						validMoves.append(nextSquare)
+					break
+				nextSquare += dir  # Move to the next square in the same direction
+	
+	elif 'r' in piece.name.to_lower():
+		# Define the possible directions for rook movement (horizontal and vertical)
+		var directions = [
+			Vector2(0, -1),   # Left
+			Vector2(0, 1),    # Right
+			Vector2(-1, 0),   # Up
+			Vector2(1, 0),    # Down
+		]
+		
+		# Iterate through each direction and check for valid moves
+		for dir in directions:
+			var nextSquare = currentSquare + dir
+			while is_valid_square(nextSquare):
+				var pieceOnNextSquare = get_piece_on_square(nextSquare)
+				if pieceOnNextSquare == ' ':
+					# If the square is empty, add it as a valid move
+					validMoves.append(nextSquare)
+				else:
+					# If the square has an opponent's piece, capture it and stop checking in this direction
+					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
+					if ponsColor != is_black:
+						validMoves.append(nextSquare)
+					break
+				nextSquare += dir  # Move to the next square in the same direction
+	
+	elif 'k' in piece.name.to_lower():
+		# Define the possible directions for king movement (including diagonals)
+		var directions = [
+			Vector2(0, -1),   # Left
+			Vector2(0, 1),    # Right
+			Vector2(-1, 0),   # Up
+			Vector2(1, 0),    # Down
+			Vector2(-1, -1),  # Diagonal left-up
+			Vector2(-1, 1),   # Diagonal left-down
+			Vector2(1, -1),   # Diagonal right-up
+			Vector2(1, 1),    # Diagonal right-down
+		]
+		
+		# Iterate through each direction and check for valid moves
+		for dir in directions:
+			var nextSquare = currentSquare + dir
+			if is_valid_square(nextSquare):
+				var pieceOnNextSquare = get_piece_on_square(nextSquare)
+				var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
+				if pieceOnNextSquare == ' ' or ponsColor != is_black:
+					# If the square is empty or has an opponent's piece, add it as a valid move
+					validMoves.append(nextSquare)
 	
 	return validMoves
 
