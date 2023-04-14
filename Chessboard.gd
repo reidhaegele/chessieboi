@@ -52,6 +52,7 @@ func _ready() -> void:
 				else:
 					pieceSprite.texture = load("res://sprites/" + pieceChar + "1.png")
 				pieceSprite.position = Vector2(col, row) * cellSize - myOffset
+				pieceSprite.z_index = 1
 				pieceSprite.scale = Vector2(cellSize.x / pieceSprite.texture.get_width(), cellSize.y / pieceSprite.texture.get_height())
 				add_child(pieceSprite)
 
