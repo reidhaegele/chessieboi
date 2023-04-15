@@ -23,6 +23,8 @@ var chessPieceSprites: Array = [
 var cellSize: Vector2 = Vector2(64, 64)
 var myOffset: Vector2 = Vector2(225,240)
 
+var whiteTurn = true
+
 var selectedPiece: Sprite = null
 var lastPiece: Sprite = null
 var dotSize = 10
@@ -57,7 +59,7 @@ func _input(event: InputEvent) -> void:
 			var cellY: int = int((mouse_event.position.y) / cellSize.y)
 
 			# Generate the name of the chess piece sprite based on the cell position
-#			var piece_name: String = chessBoard[cellY][cellX]
+			#var piece_name: String = chessBoard[cellY][cellX]
 			
 			var chess_piece: Node = null
 			for child in self.get_children():
@@ -71,7 +73,9 @@ func _input(event: InputEvent) -> void:
 							move_selected_piece(child)
 						break
 					else:
-						chess_piece = child
+						var child_isWhite = child.name.to_upper()==child.name
+						if (whiteTurn and child_isWhite) or (not whiteTurn and not child_isWhite):
+							chess_piece = child
 			
 #			# Debugging Purposes _+_+_+_+_+_+_+_+_
 #			for child in self.get_children():
@@ -139,6 +143,7 @@ func move_selected_piece(dot: Sprite) -> void:
 	selectedPiece = null
 	lastPiece = null
 	
+	whiteTurn = not whiteTurn
 	
 
 func set_selected_piece(piece: Sprite=null) -> void:
