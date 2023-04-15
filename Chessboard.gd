@@ -25,6 +25,7 @@ var myOffset: Vector2 = Vector2(225,240)
 
 var whiteTurn = true
 
+var passantable = false
 var selectedPiece: Sprite = null
 var lastPiece: Sprite = null
 var dotSize = 10
@@ -133,7 +134,16 @@ func move_selected_piece(dot: Sprite) -> void:
 		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 		if tiley == newCellY and tilex == newCellX:
 			child.queue_free()
-	
+		if child.has_meta("passable"):
+			if not passantable:
+				child.set_meta(null)
+				passantable = false
+			
+		
+	if 'p' in selectedPiece.name.to_lower():
+		if int(abs(oldCellY-newCellY))==2:
+			selectedPiece.set_meta("passable", true)
+			passantable = true
 	
 	var temp = chessBoard[oldCellY][oldCellX]
 	chessBoard[oldCellY][oldCellX] = ' '
