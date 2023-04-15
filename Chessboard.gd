@@ -2,14 +2,6 @@ extends Sprite
 
 # Array to represent the chess pieces on the board
 var chessBoard: Array = [
-#	"rnbqkbnr",
-#	"pppppppp",
-#	"        ",
-#	"        ",
-#	"        ",
-#	"        ",
-#	"PPPPPPPP",
-#	"RNBQKBNR"
 	"rnbqkbnr",
 	"pppppppp",
 	"        ",
@@ -73,7 +65,11 @@ func _input(event: InputEvent) -> void:
 				var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 				if tiley == cellY and tilex == cellX:
 					if child.has_meta("is_dot"):
-						move_selected_piece(child)
+						if not child.has_meta("is_self"):
+							if chess_piece != null:
+								chess_piece = null
+							move_selected_piece(child)
+						break
 					else:
 						chess_piece = child
 			
@@ -124,13 +120,26 @@ func move_selected_piece(dot: Sprite) -> void:
 	var oldCellY = int((selectedPiece.position.y + myOffset.y) / cellSize.y)
 	var newCellX = int((dot.position.x + myOffset.x) / cellSize.x)
 	var newCellY = int((dot.position.y + myOffset.y) / cellSize.y)
+	
+	var temp1 = dot.position
+	clear_dots()
+	
+	for child in self.get_children():
+		var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
+		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
+		if tiley == newCellY and tilex == newCellX:
+			child.queue_free()
+	
+	
 	var temp = chessBoard[oldCellY][oldCellX]
 	chessBoard[oldCellY][oldCellX] = ' '
 	chessBoard[newCellY][newCellX] = temp
-	selectedPiece.position = dot.position
-	clear_dots()
+	selectedPiece.position = temp1
+	
 	selectedPiece = null
 	lastPiece = null
+	
+	
 
 func set_selected_piece(piece: Sprite=null) -> void:
 	selectedPiece = piece
@@ -151,6 +160,7 @@ func draw_dot(square: Vector2, dark: bool=false) -> void:
 	if dark:
 		dot.modulate = dotColor  # Set dot color
 		dot.self_modulate = dotColor
+		dot.set_meta("is_self", true)
 	
 	# Set a metadata flag to identify the dot
 	dot.set_meta("is_dot", true)
