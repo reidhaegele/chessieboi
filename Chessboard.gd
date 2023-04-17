@@ -9,7 +9,7 @@ var chessBoard: Array = [
 	"        ",
 	"        ",
 	"PPPPPPPP",
-	"RNBKQBNR"
+	"RNBQKBNR"
 ]
 
 # Resource containing the chess piece sprites
