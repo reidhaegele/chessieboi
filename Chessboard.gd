@@ -128,12 +128,34 @@ func move_selected_piece(dot: Sprite) -> void:
 	var temp1 = dot.position
 	clear_dots()
 	
+	var passX = -1
+	var passY = -1
+	var passableChild = null
 	for child in self.get_children():
 		var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
 		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 		if tiley == newCellY and tilex == newCellX:
 			child.queue_free()
-	
+			break
+		if child.has_meta("passable"):
+			child.set_meta("passable", false)
+			var childisblack = child.name.to_lower() == child.name
+			var is_black = selectedPiece.name.to_lower() == selectedPiece.name
+			if childisblack != is_black:
+				if tilex == newCellX:
+					
+					var direction = 1
+					if is_black:
+						direction = -1
+					var passedSquare = Vector2(newCellX, newCellY) + Vector2(0, direction)
+					if passedSquare == Vector2(tilex,tiley):
+						child.queue_free()
+						break
+		
+	if 'p' in selectedPiece.name.to_lower():
+		if int(abs(oldCellY-newCellY))==2:
+			selectedPiece.set_meta("passable", true)
+			
 	
 	var temp = chessBoard[oldCellY][oldCellX]
 	chessBoard[oldCellY][oldCellX] = ' '
@@ -190,6 +212,8 @@ func get_valid_moves(piece) -> Array:
 		# Check for valid moves diagonally for capturing opponent's pieces
 		var leftCapture = currentSquare + Vector2(-1, direction)
 		var rightCapture = currentSquare + Vector2(1, direction)
+		var leftPassant = currentSquare + Vector2(-1, 0)
+		var rightPassant = currentSquare + Vector2(1, 0)
 		
 		# Check if left capture is valid
 		if is_valid_square(leftCapture):
@@ -198,12 +222,32 @@ func get_valid_moves(piece) -> Array:
 			if leftCapturePiece != ' ' and lcpColor != is_black:
 				validMoves.append(leftCapture)
 				
+			var passantLeft = get_piece_on_square(leftPassant)
+			var lPColor = passantLeft.to_lower()==passantLeft
+			if passantLeft != ' ' and lPColor != is_black:
+				for child in self.get_children():
+					var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
+					var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
+					if tiley == leftPassant.y and tilex == leftPassant.x:
+						if child.get_meta("passable")==true:
+							validMoves.append(leftCapture)
+				
 		# Check if right capture is valid
 		if is_valid_square(rightCapture):
 			var rightCapturePiece = get_piece_on_square(rightCapture)
 			var rcpColor = rightCapturePiece.to_lower()==rightCapturePiece
 			if rightCapturePiece != ' ' and rcpColor != is_black:
 				validMoves.append(rightCapture)
+				
+			var passantRight = get_piece_on_square(rightPassant)
+			var rPColor = passantRight.to_lower()==passantRight
+			if passantRight != ' ' and rPColor != is_black:
+				for child in self.get_children():
+					var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
+					var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
+					if tiley == rightPassant.y and tilex == rightPassant.x:
+						if child.get_meta("passable")==true:
+							validMoves.append(rightCapture)
 		
 		# Check for valid moves one square forward
 		var forwardMove = currentSquare + Vector2(0, direction)
