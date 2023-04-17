@@ -128,9 +128,6 @@ func move_selected_piece(dot: Sprite) -> void:
 	var temp1 = dot.position
 	clear_dots()
 	
-	var passX = -1
-	var passY = -1
-	var passableChild = null
 	for child in self.get_children():
 		var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
 		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
@@ -139,18 +136,20 @@ func move_selected_piece(dot: Sprite) -> void:
 			break
 		if child.has_meta("passable"):
 			child.set_meta("passable", false)
-			var childisblack = child.name.to_lower() == child.name
-			var is_black = selectedPiece.name.to_lower() == selectedPiece.name
-			if childisblack != is_black:
-				if tilex == newCellX:
-					
-					var direction = 1
-					if is_black:
-						direction = -1
-					var passedSquare = Vector2(newCellX, newCellY) + Vector2(0, direction)
-					if passedSquare == Vector2(tilex,tiley):
-						child.queue_free()
-						break
+			if 'p' in selectedPiece.name.to_lower():
+				var childisblack = child.name.to_lower() == child.name
+				var is_black = selectedPiece.name.to_lower() == selectedPiece.name
+				if childisblack != is_black:
+					if tilex == newCellX:
+						
+						var direction = 1
+						if is_black:
+							direction = -1
+						var passedSquare = Vector2(newCellX, newCellY) + Vector2(0, direction)
+						if passedSquare == Vector2(tilex,tiley):
+							child.queue_free()
+							chessBoard[tiley][tilex] = ' '
+							break
 		
 	if 'p' in selectedPiece.name.to_lower():
 		if int(abs(oldCellY-newCellY))==2:
