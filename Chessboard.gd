@@ -24,11 +24,14 @@ var cellSize: Vector2 = Vector2(64, 64)
 var myOffset: Vector2 = Vector2(225,240)
 
 var whiteTurn = true
+var black_check = false
+var white_check = false
 
 var selectedPiece: Sprite = null
 var lastPiece: Sprite = null
 var dotSize = 10
 var dotColor = Color(0.9, 0.8, 0.3)
+var checkColor = Color(1, 0.1, 0.3)
 
 func _ready() -> void:
 	# Spawn chess pieces on the board
@@ -67,11 +70,11 @@ func _input(event: InputEvent) -> void:
 				var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 				if tiley == cellY and tilex == cellX:
 					if child.has_meta("is_dot"):
-						if not child.has_meta("is_self"):
+						if not (child.get_meta("is_self")==true or child.get_meta("is_check")==true):
 							if chess_piece != null:
 								chess_piece = null
 							move_selected_piece(child)
-						break
+							break
 					else:
 						var child_isWhite = child.name.to_upper()==child.name
 						if (whiteTurn and child_isWhite) or (not whiteTurn and not child_isWhite):
@@ -129,6 +132,9 @@ func move_selected_piece(dot: Sprite) -> void:
 	clear_dots()
 	
 	for child in self.get_children():
+		var childisblack = child.name.to_lower() == child.name
+		var is_black = selectedPiece.name.to_lower() == selectedPiece.name
+		
 		var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
 		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 		if tiley == newCellY and tilex == newCellX:
@@ -137,11 +143,8 @@ func move_selected_piece(dot: Sprite) -> void:
 		if child.has_meta("passable"):
 			child.set_meta("passable", false)
 			if 'p' in selectedPiece.name.to_lower():
-				var childisblack = child.name.to_lower() == child.name
-				var is_black = selectedPiece.name.to_lower() == selectedPiece.name
 				if childisblack != is_black:
 					if tilex == newCellX:
-						
 						var direction = 1
 						if is_black:
 							direction = -1
@@ -150,7 +153,7 @@ func move_selected_piece(dot: Sprite) -> void:
 							child.queue_free()
 							chessBoard[tiley][tilex] = ' '
 							break
-		
+	
 	if 'p' in selectedPiece.name.to_lower():
 		if int(abs(oldCellY-newCellY))==2:
 			selectedPiece.set_meta("passable", true)
@@ -160,6 +163,27 @@ func move_selected_piece(dot: Sprite) -> void:
 	chessBoard[oldCellY][oldCellX] = ' '
 	chessBoard[newCellY][newCellX] = temp
 	selectedPiece.position = temp1
+	
+	black_check=false
+	white_check=false
+	for child in self.get_children():
+		var childisblack = child.name.to_lower() == child.name
+		if whiteTurn:
+			if not childisblack:
+				var moves = get_valid_moves(child)
+				var kingPosition = find_piece('k')
+				if kingPosition in moves:
+					black_check = true
+					draw_dot(kingPosition, false, true)
+					break
+		if not whiteTurn:
+			if childisblack:
+				var moves = get_valid_moves(child)
+				var kingPosition = find_piece('K')
+				if kingPosition in moves:
+					white_check = true
+					draw_dot(kingPosition, false, true)
+					break
 	
 	selectedPiece = null
 	lastPiece = null
@@ -173,10 +197,10 @@ func set_selected_piece(piece: Sprite=null) -> void:
 func clear_dots() -> void:
 	# Remove all child nodes that are dots
 	for child in get_children():
-		if child.has_meta("is_dot"):
+		if child.has_meta("is_dot") and not child.get_meta("is_check")==true:
 			child.queue_free()
 
-func draw_dot(square: Vector2, dark: bool=false) -> void:
+func draw_dot(square: Vector2, dark: bool=false, check: bool=false) -> void:
 	# Create a new dot Sprite
 	var dot = Sprite.new()
 	dot.texture = load("res://sprites/Dot.png")  # Set dot texture
@@ -187,6 +211,11 @@ func draw_dot(square: Vector2, dark: bool=false) -> void:
 		dot.modulate = dotColor  # Set dot color
 		dot.self_modulate = dotColor
 		dot.set_meta("is_self", true)
+		
+	if check:
+		dot.modulate = checkColor  # Set dot color
+		dot.self_modulate = checkColor
+		dot.set_meta("is_check", true)
 	
 	# Set a metadata flag to identify the dot
 	dot.set_meta("is_dot", true)
@@ -401,3 +430,15 @@ func is_valid_square(square: Vector2) -> bool:
 
 func get_piece_on_square(square: Vector2) -> String:
 	return chessBoard[square.y][square.x]
+
+func find_piece(piece: String) -> Vector2:
+	for row in range(8):
+	# Iterate through columns
+		for col in range(8):
+			# Check if the element at the current row and column is the desired character
+			if chessBoard[row][col] == piece:
+				# Return the row and column index as a Vector2
+				return Vector2(col, row)
+
+	# If the character is not found, return an invalid Vector2
+	return Vector2(-1, -1)
