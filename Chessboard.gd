@@ -139,7 +139,7 @@ func move_selected_piece(dot: Sprite) -> void:
 		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 		if tiley == newCellY and tilex == newCellX:
 			child.queue_free()
-			break
+#			break
 		if child.has_meta("passable"):
 			child.remove_meta("passable")
 			if 'p' in selectedPiece.name.to_lower():
@@ -152,7 +152,7 @@ func move_selected_piece(dot: Sprite) -> void:
 						if passedSquare == Vector2(tilex,tiley):
 							child.queue_free()
 							chessBoard[tiley][tilex] = ' '
-							break
+#							break
 		if child.has_meta("is_check"):
 			black_check = false
 			white_check = false
