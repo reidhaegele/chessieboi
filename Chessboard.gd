@@ -70,7 +70,7 @@ func _input(event: InputEvent) -> void:
 				var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 				if tiley == cellY and tilex == cellX:
 					if child.has_meta("is_dot"):
-						if not (child.get_meta("is_self")==true or child.get_meta("is_check")==true):
+						if not (child.has_meta("is_self") or child.has_meta("is_check")):
 							if chess_piece != null:
 								chess_piece = null
 							move_selected_piece(child)
@@ -79,6 +79,7 @@ func _input(event: InputEvent) -> void:
 						var child_isWhite = child.name.to_upper()==child.name
 						if (whiteTurn and child_isWhite) or (not whiteTurn and not child_isWhite):
 							chess_piece = child
+							break
 			
 #			# Debugging Purposes _+_+_+_+_+_+_+_+_
 #			for child in self.get_children():
@@ -101,12 +102,11 @@ func _input(event: InputEvent) -> void:
 			if chess_piece != null and chess_piece is Sprite:
 				# Perform actions on the selected chess piece sprite
 				set_selected_piece(chess_piece)
-				# ... add your logic here ...
 			else:
 				set_selected_piece()
 				lastPiece=null
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if selectedPiece != null:
 		if selectedPiece != lastPiece:
 			lastPiece = selectedPiece
@@ -141,7 +141,7 @@ func move_selected_piece(dot: Sprite) -> void:
 			child.queue_free()
 			break
 		if child.has_meta("passable"):
-			child.set_meta("passable", false)
+			child.remove_meta("passable")
 			if 'p' in selectedPiece.name.to_lower():
 				if childisblack != is_black:
 					if tilex == newCellX:
@@ -153,6 +153,10 @@ func move_selected_piece(dot: Sprite) -> void:
 							child.queue_free()
 							chessBoard[tiley][tilex] = ' '
 							break
+		if child.has_meta("is_check"):
+			black_check = false
+			white_check = false
+			child.queue_free()
 	
 	if 'p' in selectedPiece.name.to_lower():
 		if int(abs(oldCellY-newCellY))==2:
@@ -197,7 +201,7 @@ func set_selected_piece(piece: Sprite=null) -> void:
 func clear_dots() -> void:
 	# Remove all child nodes that are dots
 	for child in get_children():
-		if child.has_meta("is_dot") and not child.get_meta("is_check")==true:
+		if child.has_meta("is_dot") and not child.has_meta("is_check"):
 			child.queue_free()
 
 func draw_dot(square: Vector2, dark: bool=false, check: bool=false) -> void:
@@ -248,7 +252,21 @@ func get_valid_moves(piece) -> Array:
 			var leftCapturePiece = get_piece_on_square(leftCapture)
 			var lcpColor = leftCapturePiece.to_lower()==leftCapturePiece
 			if leftCapturePiece != ' ' and lcpColor != is_black:
-				validMoves.append(leftCapture)
+				if is_black and black_check:
+					var potential_board = chessBoard.duplicate()
+					potential_board[leftCapture.y][leftCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+					potential_board[currentSquare.y][currentSquare.x] = ' '
+					var king_pos: Vector2 = find_piece('k')
+					if not is_in_check(potential_board, king_pos):
+						validMoves.append(leftCapture)
+				elif (not is_black) and (white_check):
+					var potential_board = chessBoard.duplicate()
+					potential_board[leftCapture.y][leftCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+					potential_board[currentSquare.y][currentSquare.x] = ' '
+					var king_pos: Vector2 = find_piece('K')
+					if not is_in_check(potential_board, king_pos):
+						validMoves.append(leftCapture)
+				else: validMoves.append(leftCapture)
 				
 			var passantLeft = get_piece_on_square(leftPassant)
 			var lPColor = passantLeft.to_lower()==passantLeft
@@ -257,15 +275,45 @@ func get_valid_moves(piece) -> Array:
 					var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
 					var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 					if tiley == leftPassant.y and tilex == leftPassant.x:
-						if child.get_meta("passable")==true:
-							validMoves.append(leftCapture)
+						if child.has_meta("passable"):
+							if is_black and black_check:
+								var potential_board = chessBoard.duplicate()
+								potential_board[leftCapture.y][leftCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+								potential_board[currentSquare.y][currentSquare.x] = ' '
+								potential_board[leftPassant.y][leftPassant.x] = ' '
+								var king_pos: Vector2 = find_piece('k')
+								if not is_in_check(potential_board, king_pos):
+									validMoves.append(leftCapture)
+							elif (not is_black) and (white_check):
+								var potential_board = chessBoard.duplicate()
+								potential_board[leftCapture.y][leftCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+								potential_board[currentSquare.y][currentSquare.x] = ' '
+								potential_board[leftPassant.y][leftPassant.x] = ' '
+								var king_pos: Vector2 = find_piece('K')
+								if not is_in_check(potential_board, king_pos):
+									validMoves.append(leftCapture)
+							else: validMoves.append(leftCapture)
 				
 		# Check if right capture is valid
 		if is_valid_square(rightCapture):
 			var rightCapturePiece = get_piece_on_square(rightCapture)
 			var rcpColor = rightCapturePiece.to_lower()==rightCapturePiece
 			if rightCapturePiece != ' ' and rcpColor != is_black:
-				validMoves.append(rightCapture)
+				if is_black and black_check:
+					var potential_board = chessBoard.duplicate()
+					potential_board[rightCapture.y][rightCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+					potential_board[currentSquare.y][currentSquare.x] = ' '
+					var king_pos: Vector2 = find_piece('k')
+					if not is_in_check(potential_board, king_pos):
+						validMoves.append(rightCapture)
+				elif (not is_black) and (white_check):
+					var potential_board = chessBoard.duplicate()
+					potential_board[rightCapture.y][rightCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+					potential_board[currentSquare.y][currentSquare.x] = ' '
+					var king_pos: Vector2 = find_piece('K')
+					if not is_in_check(potential_board, king_pos):
+						validMoves.append(rightCapture)
+				else: validMoves.append(rightCapture)
 				
 			var passantRight = get_piece_on_square(rightPassant)
 			var rPColor = passantRight.to_lower()==passantRight
@@ -274,19 +322,63 @@ func get_valid_moves(piece) -> Array:
 					var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
 					var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 					if tiley == rightPassant.y and tilex == rightPassant.x:
-						if child.get_meta("passable")==true:
-							validMoves.append(rightCapture)
+						if child.has_meta("passable"):
+							if is_black and black_check:
+								var potential_board = chessBoard.duplicate()
+								potential_board[rightCapture.y][rightCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+								potential_board[currentSquare.y][currentSquare.x] = ' '
+								potential_board[rightPassant.y][rightPassant.x] = ' '
+								var king_pos: Vector2 = find_piece('k')
+								if not is_in_check(potential_board, king_pos):
+									validMoves.append(rightCapture)
+							elif (not is_black) and (white_check):
+								var potential_board = chessBoard.duplicate()
+								potential_board[rightCapture.y][rightCapture.x] = potential_board[currentSquare.y][currentSquare.x]
+								potential_board[currentSquare.y][currentSquare.x] = ' '
+								potential_board[rightPassant.y][rightPassant.x] = ' '
+								var king_pos: Vector2 = find_piece('K')
+								if not is_in_check(potential_board, king_pos):
+									validMoves.append(rightCapture)
+							else: validMoves.append(rightCapture)
 		
 		# Check for valid moves one square forward
 		var forwardMove = currentSquare + Vector2(0, direction)
 		if is_valid_square(forwardMove) and get_piece_on_square(forwardMove) == ' ':
-			validMoves.append(forwardMove)
+			if is_black and black_check:
+				var potential_board = chessBoard.duplicate()
+				potential_board[forwardMove.y][forwardMove.x] = potential_board[currentSquare.y][currentSquare.x]
+				potential_board[currentSquare.y][currentSquare.x] = ' '
+				var king_pos: Vector2 = find_piece('k')
+				if not is_in_check(potential_board, king_pos):
+					validMoves.append(forwardMove)
+			elif (not is_black) and white_check:
+				var potential_board = chessBoard.duplicate()
+				potential_board[forwardMove.y][forwardMove.x] = potential_board[currentSquare.y][currentSquare.x]
+				potential_board[currentSquare.y][currentSquare.x] = ' '
+				var king_pos: Vector2 = find_piece('K')
+				if not is_in_check(potential_board, king_pos):
+					validMoves.append(forwardMove)
+			else: validMoves.append(forwardMove)
 			# Check for valid moves two squares forward from starting position
 			var startingPosition = (1 if is_black else 6)  # Assuming the pawn starts at row 1 for white, row 6 for black
 			if currentSquare.y == startingPosition:
 				var doubleForwardMove = currentSquare + Vector2(0, direction * 2)
 				if is_valid_square(doubleForwardMove) and get_piece_on_square(doubleForwardMove) == ' ':
-					validMoves.append(doubleForwardMove)
+					if is_black and black_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[doubleForwardMove.y][doubleForwardMove.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('k')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(doubleForwardMove)
+					elif (not is_black) and (white_check):
+						var potential_board = chessBoard.duplicate()
+						potential_board[doubleForwardMove.y][doubleForwardMove.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('K')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(doubleForwardMove)
+					else: validMoves.append(doubleForwardMove)
 	
 	elif 'b' in piece.name.to_lower():
 		# Define the possible directions for bishop movement
@@ -304,12 +396,40 @@ func get_valid_moves(piece) -> Array:
 				var pieceOnNextSquare = get_piece_on_square(nextSquare)
 				if pieceOnNextSquare == ' ':
 					# If the square is empty, add it as a valid move
-					validMoves.append(nextSquare)
+					if is_black and black_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('k')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					elif (not is_black) and white_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('K')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					else: validMoves.append(nextSquare)
 				else:
 					# If the square has an opponent's piece, capture it and stop checking in this direction
 					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
 					if ponsColor != is_black:
-						validMoves.append(nextSquare)
+						if is_black and black_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('k')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						elif (not is_black) and white_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('K')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						else: validMoves.append(nextSquare)
 					break
 				nextSquare += dir  # Move to the next square in the same direction
 	
@@ -333,12 +453,40 @@ func get_valid_moves(piece) -> Array:
 				var pieceOnNextSquare = get_piece_on_square(nextSquare)
 				if pieceOnNextSquare == ' ':
 					# If the square is empty, add it as a valid move
-					validMoves.append(nextSquare)
+					if is_black and black_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('k')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					elif (not is_black) and white_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('K')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					else: validMoves.append(nextSquare)
 				else:
 					# If the square has an opponent's piece, capture it and add as a valid move
 					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
 					if ponsColor != is_black:
-						validMoves.append(nextSquare)
+						if is_black and black_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('k')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						elif (not is_black) and white_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('K')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						else: validMoves.append(nextSquare)
 	
 	elif 'q' in piece.name.to_lower():
 		# Define the possible directions for queen movement (diagonal, horizontal, and vertical)
@@ -360,12 +508,40 @@ func get_valid_moves(piece) -> Array:
 				var pieceOnNextSquare = get_piece_on_square(nextSquare)
 				if pieceOnNextSquare == ' ':
 					# If the square is empty, add it as a valid move
-					validMoves.append(nextSquare)
+					if is_black and black_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('k')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					elif (not is_black) and white_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('K')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					else: validMoves.append(nextSquare)
 				else:
 					# If the square has an opponent's piece, capture it and stop checking in this direction
 					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
 					if ponsColor != is_black:
-						validMoves.append(nextSquare)
+						if is_black and black_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('k')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						elif (not is_black) and white_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('K')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						else: validMoves.append(nextSquare)
 					break
 				nextSquare += dir  # Move to the next square in the same direction
 	
@@ -385,12 +561,40 @@ func get_valid_moves(piece) -> Array:
 				var pieceOnNextSquare = get_piece_on_square(nextSquare)
 				if pieceOnNextSquare == ' ':
 					# If the square is empty, add it as a valid move
-					validMoves.append(nextSquare)
+					if is_black and black_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('k')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					elif (not is_black) and white_check:
+						var potential_board = chessBoard.duplicate()
+						potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+						potential_board[currentSquare.y][currentSquare.x] = ' '
+						var king_pos: Vector2 = find_piece('K')
+						if not is_in_check(potential_board, king_pos):
+							validMoves.append(nextSquare)
+					else: validMoves.append(nextSquare)
 				else:
 					# If the square has an opponent's piece, capture it and stop checking in this direction
 					var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
 					if ponsColor != is_black:
-						validMoves.append(nextSquare)
+						if is_black and black_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('k')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						elif (not is_black) and white_check:
+							var potential_board = chessBoard.duplicate()
+							potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+							potential_board[currentSquare.y][currentSquare.x] = ' '
+							var king_pos: Vector2 = find_piece('K')
+							if not is_in_check(potential_board, king_pos):
+								validMoves.append(nextSquare)
+						else: validMoves.append(nextSquare)
 					break
 				nextSquare += dir  # Move to the next square in the same direction
 	
@@ -415,7 +619,11 @@ func get_valid_moves(piece) -> Array:
 				var ponsColor = pieceOnNextSquare.to_lower()==pieceOnNextSquare
 				if pieceOnNextSquare == ' ' or ponsColor != is_black:
 					# If the square is empty or has an opponent's piece, add it as a valid move
-					validMoves.append(nextSquare)
+					var potential_board = chessBoard.duplicate()
+					potential_board[nextSquare.y][nextSquare.x] = potential_board[currentSquare.y][currentSquare.x]
+					potential_board[currentSquare.y][currentSquare.x] = ' '
+					if not is_in_check(potential_board, nextSquare):
+						validMoves.append(nextSquare)
 	
 	return validMoves
 
@@ -442,3 +650,75 @@ func find_piece(piece: String) -> Vector2:
 
 	# If the character is not found, return an invalid Vector2
 	return Vector2(-1, -1)
+
+const DIRECTIONS = [
+	Vector2(0, -1),   # Up
+	Vector2(0, 1),    # Down
+	Vector2(-1, 0),   # Left
+	Vector2(1, 0),    # Right
+	Vector2(-1, -1),  # Up-Left
+	Vector2(-1, 1),   # Down-Left
+	Vector2(1, -1),   # Up-Right
+	Vector2(1, 1),    # Down-Right
+]
+const KNIGHT_MOVES: Array = [
+	Vector2(1, 2),
+	Vector2(2, 1),
+	Vector2(-1, 2),
+	Vector2(-2, 1),
+	Vector2(1, -2),
+	Vector2(2, -1),
+	Vector2(-1, -2),
+	Vector2(-2, -1)
+]
+
+
+# Function to check if the king is in check
+func is_in_check(board: Array, king_pos: Vector2) -> bool:
+	# Define the enemy player
+	var is_black = false
+	var p = board[king_pos.y][king_pos.x]
+	if p.to_lower() == p: is_black = true 
+	
+	# Check for threats from enemy knights
+	for i in range(8):
+		var next_pos = king_pos + KNIGHT_MOVES[i]
+		if is_valid_square(next_pos):
+			var next_piece = board[int(next_pos.y)][int(next_pos.x)]
+			var npBlack = next_piece.to_lower()==next_piece
+			if next_piece.to_lower() == 'n' and (npBlack != is_black):
+				return true
+	
+	# Check for threats from enemy bishops, rooks, and queens
+	for i in range(8):
+		var current_pos = king_pos + DIRECTIONS[i]
+		while is_valid_square(current_pos):
+			var curr_piece = board[int(current_pos.y)][int(current_pos.x)]
+			var lower_curr = curr_piece.to_lower()
+			var is_enemy = (lower_curr == curr_piece) != is_black
+			if curr_piece != ' ':
+				if is_enemy and lower_curr == 'b' and i in [4, 5, 6, 7]:
+					return true
+				elif is_enemy and lower_curr == 'r' and i in [0, 1, 2, 3]:
+					return true
+				elif is_enemy and lower_curr == 'q':
+#					if i in [0, 1, 2, 3] or i in [4, 5, 6, 7]:
+						return true
+				break
+			current_pos += DIRECTIONS[i]
+	
+	# Check for threats from enemy pawns
+	var pawn_attacks = [Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1), Vector2(1, 1)]
+	for i in range(4):
+		var next_pos = king_pos + pawn_attacks[i]
+		if not is_valid_square(next_pos):
+			continue
+		var next_piece = board[int(next_pos.y)][int(next_pos.x)]
+		var lower_next = next_piece.to_lower()
+		var is_enemy = (lower_next == next_piece) != is_black
+		if lower_next == 'p' and is_enemy:
+			return true
+	
+	# If no threats are found, the king is not in check
+	return false
+
