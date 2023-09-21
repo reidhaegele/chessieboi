@@ -12,12 +12,7 @@ var chessBoard: Array = [
 	"RNBQKBNR"
 ]
 
-# Resource containing the chess piece sprites
-var chessPieceSprites: Array = [
-	"r", "n", "b", "q", "k", "b", "n", "r",  # Black pieces
-	"p", "P",                               # Pawns
-	"R", "N", "B", "Q", "K", "B", "N", "R"   # White pieces
-]
+var chessPieces = {"p": 1, "n": 3, "b": 3, "r": 5, "q": 9}
 
 # Chessboard cell size
 var cellSize: Vector2 = Vector2(64, 64)
@@ -26,12 +21,18 @@ var myOffset: Vector2 = Vector2(225,240)
 var whiteTurn = true
 var black_check = false
 var white_check = false
+var black_checkmate = false
+var white_checkmate = false
 
 var selectedPiece: Sprite = null
 var lastPiece: Sprite = null
 var dotSize = 10
 var dotColor = Color(0.9, 0.8, 0.3)
 var checkColor = Color(1, 0.1, 0.3)
+signal w_capture(piece, value)
+signal b_capture(piece, value)
+signal check(color)
+signal checkmate(color)
 
 func _ready() -> void:
 	# Spawn chess pieces on the board
@@ -121,6 +122,9 @@ func _process(_delta: float) -> void:
 			draw_dot(Vector2(int((selectedPiece.position.x + myOffset.x) / cellSize.x), int((selectedPiece.position.y + myOffset.y) / cellSize.y)), true)
 	else:
 		clear_dots()
+	if black_check: emit_signal("check", true)
+	elif white_check: emit_signal("check", false)
+	else: emit_signal("check", 2)
 
 func move_selected_piece(dot: Sprite) -> void:
 	var oldCellX = int((selectedPiece.position.x + myOffset.x) / cellSize.x)
@@ -138,6 +142,15 @@ func move_selected_piece(dot: Sprite) -> void:
 		var tilex: int = int((child.position.x + myOffset.x) / cellSize.x)
 		var tiley: int = int((child.position.y + myOffset.y) / cellSize.y)
 		if tiley == newCellY and tilex == newCellX:
+			print(child.name)
+			for p in chessPieces:
+				if p in child.name.to_lower():
+					var v = chessPieces[p]
+					if childisblack:
+						emit_signal("w_capture", p, v)
+					else:
+						emit_signal("b_capture", p, v)
+					break
 			child.queue_free()
 #			break
 		if child.has_meta("passable"):
@@ -150,6 +163,10 @@ func move_selected_piece(dot: Sprite) -> void:
 							direction = -1
 						var passedSquare = Vector2(newCellX, newCellY) + Vector2(0, direction)
 						if passedSquare == Vector2(tilex,tiley):
+							if childisblack:
+								emit_signal("w_capture", "p", 1)
+							else:
+								emit_signal("b_capture", "p", 1)
 							child.queue_free()
 							chessBoard[tiley][tilex] = ' '
 #							break
@@ -170,25 +187,34 @@ func move_selected_piece(dot: Sprite) -> void:
 	
 	black_check=false
 	white_check=false
+	white_checkmate = true
+	black_checkmate = true
 	for child in self.get_children():
 		var childisblack = child.name.to_lower() == child.name
-		if whiteTurn:
-			if not childisblack:
-				var moves = get_valid_moves(child)
-				var kingPosition = find_piece('k')
-				if kingPosition in moves:
-					black_check = true
-					draw_dot(kingPosition, false, true)
-					break
-		if not whiteTurn:
-			if childisblack:
-				var moves = get_valid_moves(child)
-				var kingPosition = find_piece('K')
-				if kingPosition in moves:
-					white_check = true
-					draw_dot(kingPosition, false, true)
-					break
-	
+#		if whiteTurn:
+#			if not childisblack:
+		var moves = get_valid_moves(child)
+		if moves and not childisblack: white_checkmate = false
+		if moves and childisblack: black_checkmate = false
+		var kingPosition = find_piece('k')
+		if kingPosition in moves:
+			if not childisblack: black_check = true
+			else: white_check = true
+			draw_dot(kingPosition, false, true)
+			break
+#		else:
+#			if childisblack:
+#				var moves = get_valid_moves(child)
+#				if moves: black_checkmate = false
+#				var kingPosition = find_piece('K')
+#				if kingPosition in moves:
+#					white_check = true
+#					draw_dot(kingPosition, false, true)
+#					break
+	if white_checkmate:
+		emit_signal("checkmate", false)
+	elif black_checkmate:
+		emit_signal("checkmate", true)
 	selectedPiece = null
 	lastPiece = null
 	
@@ -703,6 +729,15 @@ func is_in_check(board: Array, king_pos: Vector2) -> bool:
 		var lower_next = next_piece.to_lower()
 		var is_enemy = (lower_next == next_piece) != is_black
 		if lower_next == 'p' and is_enemy:
+			return true
+	
+	#Check for threats from enemy kings
+	for dir in DIRECTIONS:
+		var next_pos = Vector2((king_pos.x + dir.x), (king_pos.y + dir.y))
+		if not is_valid_square(next_pos):
+			continue
+		if board[next_pos.y][next_pos.x].to_lower()=='k':
+			var is_enemy = (board[next_pos.y][next_pos.x] == board[next_pos.y][next_pos.x].to_lower()) != is_black
 			return true
 	
 	# If no threats are found, the king is not in check
